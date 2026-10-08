@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#111827">
+  <title>一筆記憶バトル</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="header">
+      <h1>一筆記憶バトル</h1>
+      <p class="subtitle">見て、覚えて、同じルートを再現せよ！</p>
+    </header>
+
+    <section class="scoreboard">
+      <div class="player-card" id="player1Card">
+        <span>PLAYER 1</span>
+        <strong id="score1">0</strong>
+      </div>
+      <div class="round-card">
+        <span id="roundLabel">ROUND 1 / 10</span>
+        <small id="roleLabel">PLAYER 1 が出題</small>
+      </div>
+      <div class="player-card" id="player2Card">
+        <span>PLAYER 2</span>
+        <strong id="score2">0</strong>
+      </div>
+    </section>
+
+    <section class="game-panel">
+      <div class="status-area">
+        <div id="status" class="status">ゲームスタートを押してください</div>
+        <div id="countdown" class="countdown" aria-live="polite"></div>
+      </div>
+
+      <div class="grid-wrap">
+        <div id="grid" class="grid" aria-label="4×4ゲーム盤"></div>
+      </div>
+
+      <div class="progress-area">
+        <div class="progress-text">
+          <span>ルート</span>
+          <strong id="progressText">0 / 8</strong>
+        </div>
+        <div class="progress-bar">
+          <div id="progressBar"></div>
+        </div>
+      </div>
+
+      <div id="message" class="message"></div>
+
+      <div class="controls">
+        <button id="startButton" class="primary">ゲームスタート</button>
+        <button id="nextButton" class="secondary" hidden>次のラウンド</button>
+        <button id="resetButton" class="ghost">リセット</button>
+      </div>
+    </section>
+
+    <section class="rules">
+      <h2>ルール</h2>
+      <ol>
+        <li>出題側が5〜8マスのルートを作る。</li>
+        <li>5秒間だけルートを記憶する。</li>
+        <li>回答側が同じ順番で再現する。</li>
+        <li>完全再現 → 回答側に <b>+1</b></li>
+        <li>間違える → 出題側に <b>+1</b></li>
+      </ol>
+    </section>
+  </main>
+
+  <script src="script.js"></script>
+</body>
+</html>
