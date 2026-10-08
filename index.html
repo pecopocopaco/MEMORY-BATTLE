@@ -5,45 +5,73 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#111827">
-  <title>一筆記憶バトル</title>
+  <meta name="theme-color" content="#16112e">
+  <title>MEMORY TRACE</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@500;700;800&family=Unbounded:wght@700;800&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css">
 </head>
 <body>
   <main class="app">
-    <header class="header">
-      <h1>一筆記憶バトル</h1>
-      <p class="subtitle">見て、覚えて、同じルートを再現せよ！</p>
-    </header>
 
-    <section id="modeScreen" class="mode-screen">
-      <h2>ゲームモード</h2>
-      <div class="mode-buttons">
-        <button id="cpuModeButton" class="mode-button">
-          <span class="mode-icon">🤖</span>
-          <strong>ひとりプレイ</strong>
-          <small>CPUが出題</small>
+    <!-- オープニング / Title -->
+    <section id="titleScreen" class="title-screen">
+      <svg class="brain" viewBox="0 0 400 300" role="img" aria-label="Brain">
+        <defs>
+          <g id="hemi">
+            <path class="lobe" d="M196 30C168 14 124 20 100 44C72 50 50 76 54 106C32 126 34 164 54 184C48 214 70 242 102 248C122 276 170 284 196 262Z"/>
+            <path class="fold" d="M196 62C170 52 146 62 140 82C120 80 104 96 112 116"/>
+            <path class="fold" d="M196 120C166 112 148 130 154 150C132 152 120 172 132 190"/>
+            <path class="fold" d="M196 190C172 184 158 200 164 218C148 226 146 244 160 252"/>
+            <path class="fold" d="M104 46C112 62 100 76 82 80"/>
+            <path class="fold" d="M72 150C90 144 104 152 106 168"/>
+            <path class="fold" d="M96 214C110 206 124 212 128 226"/>
+          </g>
+        </defs>
+        <use href="#hemi"/>
+        <use href="#hemi" transform="translate(400 0) scale(-1 1)"/>
+        <g class="nodes" id="brainNodes"></g>
+        <path class="trace" pathLength="100" d="M108 186L172 132L172 78L228 132L292 78L292 132L228 186L228 240"/>
+      </svg>
+
+      <h1 class="logo">MEMORY<br>TRACE</h1>
+      <p class="tagline" data-i18n="tagline"></p>
+
+      <div class="menu">
+        <button id="cpuModeButton" class="menu-btn" type="button">
+          <span class="glyph" aria-hidden="true"><i></i></span>
+          <span class="menu-text"><strong data-i18n="onePlayer"></strong><small data-i18n="onePlayerSub"></small></span>
         </button>
-        <button id="twoPlayerModeButton" class="mode-button">
-          <span class="mode-icon">👥</span>
-          <strong>2人対戦</strong>
-          <small>交互に出題</small>
+        <button id="twoPlayerModeButton" class="menu-btn" type="button">
+          <span class="glyph" aria-hidden="true"><i></i><i></i></span>
+          <span class="menu-text"><strong data-i18n="twoPlayer"></strong><small data-i18n="twoPlayerSub"></small></span>
         </button>
+        <button id="settingsButton" class="menu-btn quiet" type="button" data-i18n="settings"></button>
       </div>
     </section>
 
+    <!-- 設定 / Settings -->
+    <section id="settingsScreen" class="settings-screen" hidden>
+      <h2 data-i18n="settings"></h2>
+      <div id="settingsList" class="settings-list"></div>
+      <p class="note" data-i18n="vibNote"></p>
+      <button id="settingsBackButton" class="menu-btn quiet" type="button" data-i18n="back"></button>
+    </section>
+
+    <!-- ゲーム / Game -->
     <section id="gameScreen" hidden>
+      <header class="mini-header">MEMORY TRACE</header>
+
       <section class="scoreboard">
         <div class="player-card" id="player1Card">
           <span id="player1Name">PLAYER 1</span>
           <strong id="score1">0</strong>
         </div>
-
         <div class="round-card">
           <span id="roundLabel">ROUND 1 / 10</span>
-          <small id="roleLabel">CPU が出題</small>
+          <small id="roleLabel"></small>
         </div>
-
         <div class="player-card" id="player2Card">
           <span id="player2Name">CPU</span>
           <strong id="score2">0</strong>
@@ -52,47 +80,35 @@
 
       <section class="game-panel">
         <div class="status-area">
-          <div id="status" class="status">ゲームスタート</div>
+          <div id="status" class="status"></div>
           <div id="countdown" class="countdown" aria-live="polite"></div>
         </div>
-
         <div class="grid-wrap">
-          <div id="grid" class="grid" aria-label="4×4ゲーム盤"></div>
+          <div id="grid" class="grid"></div>
         </div>
-
         <div class="progress-area">
           <div class="progress-text">
-            <span>ルート</span>
+            <span data-i18n="route"></span>
             <strong id="progressText">0 / 8</strong>
           </div>
-          <div class="progress-bar">
-            <div id="progressBar"></div>
-          </div>
+          <div class="progress-bar"><div id="progressBar"></div></div>
         </div>
-
         <div id="message" class="message"></div>
-
         <div class="controls">
-          <button id="startButton" class="primary">ゲームスタート</button>
-          <button id="nextButton" class="secondary" hidden>次のラウンド</button>
-          <button id="backButton" class="ghost">モード選択</button>
-          <button id="resetButton" class="ghost">リセット</button>
+          <button id="startButton" class="primary" type="button"></button>
+          <button id="nextButton" class="secondary" type="button" hidden></button>
+          <button id="backButton" class="ghost" type="button" data-i18n="toTitle"></button>
+          <button id="resetButton" class="ghost" type="button" data-i18n="reset"></button>
         </div>
       </section>
 
       <section class="rules">
-        <h2>ルール</h2>
-        <ol id="rulesList">
-          <li>CPUが5〜8マスのルートを作る。</li>
-          <li>5秒間だけルートを記憶する。</li>
-          <li>同じ順番でルートを再現する。</li>
-          <li>完全再現 → あなたに <b>+1</b></li>
-          <li>間違える → CPUに <b>+1</b></li>
-        </ol>
+        <h2 data-i18n="rulesTitle"></h2>
+        <ol id="rulesList"></ol>
       </section>
     </section>
-  </main>
 
+  </main>
   <script src="script.js"></script>
 </body>
 </html>
