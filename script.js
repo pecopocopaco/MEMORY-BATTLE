@@ -19,13 +19,17 @@ const I18N = {
     settings: "設定", back: "もどる", toTitle: "タイトルへ", reset: "リセット",
     language: "言語", memoryTime: "記憶時間", rounds: "ラウンド数", difficulty: "難易度",
     sound: "効果音", vibration: "振動",
+    cpuSpeed: "CPUの表示スピード（1人プレイ）",
+    spdSlow: "ゆっくり", spdNormal: "ふつう", spdFast: "はやい", spdMax: "最速",
+    ready: "準備はいい？",
     easy: "やさしい", normal: "ふつう", hard: "むずかしい", on: "ON", off: "OFF",
     secN: n => `${n}秒`, roundsN: n => `${n}回`,
     vibNote: "※ 振動はiPhoneのSafariでは動作しません。",
     start: "ゲームスタート", next: "次のラウンド", results: "結果を見る", again: "もう一度プレイ",
     route: "ルート", rulesTitle: "ルール",
     rulesCpu: (a, b, s) => [
-      `CPUが${a}〜${b}マスのルートを作る。`, `${s}秒間だけルートを記憶する。`,
+      `ラウンド開始前に3秒のカウントダウン。`,
+      `CPUが${a}〜${b}マスのルートを順番に光らせる。`, `${s}秒間ルートを記憶する。`,
       "同じ順番でルートを再現する。", "完全再現 → あなたに <b>+1</b>", "間違える → CPUに <b>+1</b>"],
     rules2p: (a, b, s) => [
       `出題側が${a}〜${b}マスのルートを作る。`, `${s}秒間だけルートを記憶する。`,
@@ -56,13 +60,17 @@ const I18N = {
     settings: "Settings", back: "Back", toTitle: "Title", reset: "Reset",
     language: "Language", memoryTime: "Memorize time", rounds: "Rounds", difficulty: "Difficulty",
     sound: "Sound effects", vibration: "Vibration",
+    cpuSpeed: "CPU route speed (1 Player)",
+    spdSlow: "Slow", spdNormal: "Normal", spdFast: "Fast", spdMax: "Max",
+    ready: "Get ready!",
     easy: "Easy", normal: "Normal", hard: "Hard", on: "ON", off: "OFF",
     secN: n => `${n} sec`, roundsN: n => `${n}`,
     vibNote: "Note: vibration does not work in iPhone Safari.",
     start: "Start game", next: "Next round", results: "See results", again: "Play again",
     route: "Route", rulesTitle: "Rules",
     rulesCpu: (a, b, s) => [
-      `The CPU builds a route of ${a}–${b} cells.`, `You get ${s} seconds to memorize it.`,
+      `A 3-second countdown starts each round.`,
+      `The CPU lights up a ${a}–${b} cell route, one by one.`, `You get ${s} seconds to memorize it.`,
       "Repeat the route in the same order.", "Perfect match → <b>+1</b> for you", "Mistake → <b>+1</b> for the CPU"],
     rules2p: (a, b, s) => [
       `The setter builds a route of ${a}–${b} cells.`, `You get ${s} seconds to memorize it.`,
@@ -92,7 +100,7 @@ const I18N = {
 const STORE_KEY = "memoryTraceSettings";
 const defaults = {
   lang: (navigator.language || "").toLowerCase().startsWith("ja") ? "ja" : "en",
-  memory: 5, rounds: 10, difficulty: "normal", sound: true, vibration: true
+  memory: 5, speed: 350, rounds: 10, difficulty: "normal", sound: true, vibration: true
 };
 
 function loadSettings() {
@@ -114,6 +122,7 @@ const onOff = [[true, () => t("on")], [false, () => t("off")]];
 const SETTING_DEFS = [
   ["lang", "language", [["ja", "日本語"], ["en", "English"]]],
   ["memory", "memoryTime", [3, 5, 8].map(v => [v, () => t("secN", v)])],
+  ["speed", "cpuSpeed", [[600, "spdSlow"], [350, "spdNormal"], [200, "spdFast"], [120, "spdMax"]].map(([v, k]) => [v, () => t(k)])],
   ["rounds", "rounds", [5, 10, 15].map(v => [v, () => t("roundsN", v)])],
   ["difficulty", "difficulty", ["easy", "normal", "hard"].map(v => [v, () => t(v)])],
   ["sound", "sound", onOff],
@@ -138,6 +147,15 @@ function beep(freq, dur = 0.08, type = "sine", vol = 0.15) {
     o.stop(audioCtx.currentTime + dur);
   } catch {}
 }
+function unlockAudio() {
+  try {
+    audioCtx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+  } catch {}
+}
+["pointerdown", "touchstart", "click"].forEach(ev =>
+  document.addEventListener(ev, unlockAudio, { passive: true }));
+
 function vibrate(pattern) {
   if (settings.vibration && navigator.vibrate) navigator.vibrate(pattern);
 }
@@ -145,6 +163,10 @@ const sfx = {
   tap: () => beep(520),
   step: n => beep(440 + n * 45),
   tick: () => beep(400, 0.05),
+  go: () => beep(880, 0.18),
+  turn: () => { beep(500, 0.09); setTimeout(() => beep(750, 0.12), 90); },
+  bad: () => beep(220, 0.12, "square", 0.1),
+  set: () => { beep(600, 0.08); setTimeout(() => beep(900, 0.12), 80); },
   ok: () => { beep(660); setTimeout(() => beep(880, 0.14), 100); vibrate([30, 40, 30]); },
   ng: () => { beep(170, 0.28, "sawtooth"); vibrate(200); }
 };
@@ -233,6 +255,7 @@ function refreshSettings() {
     r.b.textContent = typeof r.text === "function" ? r.text() : r.text;
     r.b.setAttribute("aria-pressed", String(settings[r.key] === r.value));
   });
+  renderRules();
 }
 
 function applyLang() {
@@ -305,8 +328,27 @@ function updateNames() {
   const cpu = state.mode === "cpu";
   $("player1Name").textContent = cpu ? t("you") : "PLAYER 1";
   $("player2Name").textContent = cpu ? "CPU" : "PLAYER 2";
+}
+
+let rulesTab = "cpu";
+const rulesTabRefs = [];
+function buildRulesTabs() {
+  [["cpu", "onePlayer"], ["twoPlayer", "twoPlayer"]].forEach(([key, labelKey]) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "seg-btn";
+    b.addEventListener("click", () => { rulesTab = key; sfx.tap(); renderRules(); });
+    $("rulesTabs").appendChild(b);
+    rulesTabRefs.push({ b, key, labelKey });
+  });
+}
+function renderRules() {
+  rulesTabRefs.forEach(r => {
+    r.b.textContent = t(r.labelKey);
+    r.b.setAttribute("aria-pressed", String(rulesTab === r.key));
+  });
   const [a, b] = routeRange();
-  const lines = (cpu ? t("rulesCpu", a, b, settings.memory) : t("rules2p", a, b, settings.memory));
+  const lines = rulesTab === "cpu" ? t("rulesCpu", a, b, settings.memory) : t("rules2p", a, b, settings.memory);
   $("rulesList").innerHTML = lines.map(l => `<li>${l}</li>`).join("");
 }
 
@@ -397,6 +439,7 @@ function beginRound() {
     startCpuRound();
   } else {
     startHumanSetting();
+    sfx.turn();
   }
   refreshHud();
 }
@@ -437,21 +480,44 @@ function startHumanSetting() {
 }
 
 function startCpuRound() {
-  state.phase = "countdown";
+  state.phase = "ready";
   state.playerSequence = [];
   state.routeLength = randomRouteLength();
   state.correctSequence = generateCpuRoute(state.routeLength);
 
   clearGridVisuals();
   setGridEnabled(false);
+  setStatus(t("ready"));
+  setMessage("");
+  updateProgress();
+
+  let n = 3;
+  countdown.textContent = n;
+  sfx.tick();
+  state.countdownTimer = setInterval(() => {
+    n -= 1;
+    if (n > 0) {
+      countdown.textContent = n;
+      sfx.tick();
+    } else {
+      clearInterval(state.countdownTimer);
+      countdown.textContent = "";
+      sfx.go();
+      showCpuRoute();
+    }
+  }, 1000);
+}
+
+function showCpuRoute() {
+  state.phase = "showing";
   setStatus(t("cpuThinking"));
-  countdown.textContent = "";
   setMessage(t("cpuMsg"), "gold");
+  const speed = settings.speed;
 
   state.correctSequence.forEach((index, i) => {
-    later(() => { markCell(index, "route"); sfx.step(i); }, i * 130);
+    later(() => { markCell(index, "route"); sfx.step(i); }, i * speed);
   });
-  later(startMemoryCountdown, state.correctSequence.length * 130 + 350);
+  later(startMemoryCountdown, state.correctSequence.length * speed + 350);
 }
 
 function generateCpuRoute(length) {
@@ -489,7 +555,6 @@ function isAdjacent(a, b) {
 /* ---------- 記憶 → 回答 ---------- */
 function startMemoryCountdown() {
   state.phase = "countdown";
-  clearGridVisuals();
   setGridEnabled(false);
 
   let remaining = settings.memory;
@@ -530,11 +595,13 @@ function handleCellClick(index) {
 function handleHumanSettingClick(index) {
   if (state.playerSequence.includes(index)) {
     setMessage(t("dup"), "failure");
+    sfx.bad();
     return;
   }
   const prev = state.playerSequence[state.playerSequence.length - 1];
   if (prev !== undefined && !isAdjacent(prev, index)) {
     setMessage(t("adj"), "failure");
+    sfx.bad();
     return;
   }
 
@@ -551,6 +618,7 @@ function handleHumanSettingClick(index) {
 
   if (number >= state.routeLength) {
     state.correctSequence = [...state.playerSequence];
+    sfx.set();
     startMemoryCountdown();
   }
 }
@@ -649,6 +717,7 @@ $("resetButton").addEventListener("click", resetGame);
 buildBrainNodes();
 buildGrid();
 buildSettings();
+buildRulesTabs();
 applyLang();
 setGridEnabled(false);
 showScreen("title");

@@ -53,16 +53,22 @@
 
     <!-- 設定 / Settings -->
     <section id="settingsScreen" class="settings-screen" hidden>
-      <h2 data-i18n="settings"></h2>
+      <div class="settings-head">
+        <button id="settingsBackButton" class="back-btn" type="button" data-i18n="back"></button>
+        <h2 data-i18n="settings"></h2>
+        <span class="head-spacer"></span>
+      </div>
       <div id="settingsList" class="settings-list"></div>
       <p class="note" data-i18n="vibNote"></p>
-      <button id="settingsBackButton" class="menu-btn quiet" type="button" data-i18n="back"></button>
+      <div class="rules-box">
+        <span class="setting-label" data-i18n="rulesTitle"></span>
+        <div id="rulesTabs" class="seg" role="group"></div>
+        <ol id="rulesList"></ol>
+      </div>
     </section>
 
     <!-- ゲーム / Game -->
     <section id="gameScreen" hidden>
-      <header class="mini-header">MEMORY TRACE</header>
-
       <section class="scoreboard">
         <div class="player-card" id="player1Card">
           <span id="player1Name">PLAYER 1</span>
@@ -100,11 +106,6 @@
           <button id="backButton" class="ghost" type="button" data-i18n="toTitle"></button>
           <button id="resetButton" class="ghost" type="button" data-i18n="reset"></button>
         </div>
-      </section>
-
-      <section class="rules">
-        <h2 data-i18n="rulesTitle"></h2>
-        <ol id="rulesList"></ol>
       </section>
     </section>
 
